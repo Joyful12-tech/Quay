@@ -8,15 +8,31 @@ const VALUE_TYPES = new Set([
   "path_payment_strict_send",
 ]);
 
+// Of those, the ones that also carry a paid-in (source) side.
+const PATH_PAYMENT_TYPES = new Set([
+  "path_payment_strict_receive",
+  "path_payment_strict_send",
+]);
+
 type AnyRecord = Horizon.ServerApi.PaymentOperationRecord | Horizon.ServerApi.OperationRecord;
 
-interface ValueFields {
-  to?: string;
-  from?: string;
-  amount?: string;
+interface AssetFields {
   asset_type?: string;
   asset_code?: string;
   asset_issuer?: string;
+}
+
+interface ValueFields extends AssetFields {
+  to?: string;
+  from?: string;
+  amount?: string;
+  // Path payments only: the side the payer actually spent. Horizon reports the
+  // *delivered* amount/asset in `amount`/`asset_*` above, so these never
+  // describe what the recipient got.
+  source_amount?: string;
+  source_asset_type?: string;
+  source_asset_code?: string;
+  source_asset_issuer?: string;
   // Present when the operation's destination was specified as an SEP-23
   // M-address; Horizon still normalizes `to` to the underlying G-address.
   to_muxed_id?: string;
@@ -35,7 +51,7 @@ export function isValuePayment(record: AnyRecord): boolean {
   return VALUE_TYPES.has(record.type);
 }
 
-function assetOf(r: ValueFields): AssetRef {
+function assetOf(r: AssetFields): AssetRef {
   if (r.asset_type === "native" || r.asset_type === undefined) {
     return { code: "XLM", issuer: null };
   }
@@ -58,6 +74,7 @@ export async function normalizePayment(
   fetchTransaction: FetchTransaction = defaultFetchTransaction,
 ): Promise<NormalizedPayment | null> {
   if (!isValuePayment(record)) return null;
+  const isPathPayment = PATH_PAYMENT_TYPES.has(record.type);
   const r = record as unknown as ValueFields &
     OperationWithTransaction & {
       paging_token: string;
@@ -68,6 +85,9 @@ export async function normalizePayment(
   const memoType = tx.memo_type ?? null;
   const memo = memoType && memoType !== "none" ? (tx.memo ?? null) : null;
 
+  // Path payments settle on the delivered side (`amount`/`asset_*`); the paid-in
+  // side is carried alongside for receipts and CSV export (issues 2.17, 4.66,
+  // 5.50), never for settlement. Plain payments have no source side.
   return {
     txHash: r.transaction_hash,
     pagingToken: r.paging_token,
@@ -75,6 +95,14 @@ export async function normalizePayment(
     to: r.to ?? "",
     amount: r.amount ?? "0",
     asset: assetOf(r),
+    sourceAsset: isPathPayment
+      ? assetOf({
+          asset_type: r.source_asset_type,
+          asset_code: r.source_asset_code,
+          asset_issuer: r.source_asset_issuer,
+        })
+      : null,
+    sourceAmount: isPathPayment ? (r.source_amount ?? null) : null,
     memo,
     memoType,
     toMuxedId: r.to_muxed_id ?? null,

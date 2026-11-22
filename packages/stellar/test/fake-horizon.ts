@@ -101,6 +101,21 @@ export class FakeHorizonClient implements HorizonClient {
     return record;
   }
 
+  /** Adds an arbitrary, already-shaped Horizon record (e.g. a recorded path
+   *  payment fixture) to the account's ledger and delivers it to live
+   *  subscribers — both paths a real payment would take. */
+  addRecord(account: string, record: HorizonPaymentRecord): HorizonPaymentRecord {
+    this.notFoundAccounts.delete(account);
+    const list = this.ledger.get(account) ?? [];
+    list.push(record);
+    this.ledger.set(account, list);
+
+    for (const listener of this.listeners.get(account) ?? []) {
+      listener.onmessage(record);
+    }
+    return record;
+  }
+
   /** Pushes an arbitrary record directly to registered SSE listeners for testing. */
   pushMessage(account: string, record: HorizonPaymentRecord): void {
     for (const listener of this.listeners.get(account) ?? []) {
