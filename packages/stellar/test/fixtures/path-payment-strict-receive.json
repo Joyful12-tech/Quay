@@ -1,0 +1,21 @@
+{
+  "_fixture_source": "Recorded from Horizon testnet: https://horizon-testnet.stellar.org/operations/25202125063602177 (fetched 2026-11-22). `_links` omitted; every other field is verbatim.",
+  "id": "25202125063602177",
+  "paging_token": "25202125063602177",
+  "transaction_successful": true,
+  "source_account": "GCYG5C5AERHKEIDSTJKEOGBQF6QWLYJHIUODZWBVXM3IZINJEHD5UVO7",
+  "type": "path_payment_strict_receive",
+  "type_i": 2,
+  "created_at": "2026-11-22T15:52:56Z",
+  "transaction_hash": "f270b91720c4a805004916aa18212c56a54f85fe9066ae595e6c1a9d966b655d",
+  "asset_type": "credit_alphanum4",
+  "asset_code": "USDC",
+  "asset_issuer": "GCRKWLMECGBERYAJM5F4SMQXLXO7QCXX5B632RJH747JXS6NNJVVIZEV",
+  "from": "GCYG5C5AERHKEIDSTJKEOGBQF6QWLYJHIUODZWBVXM3IZINJEHD5UVO7",
+  "to": "GDIXIET2FDMTWGW5TADETT6BG4NGMREE775CV7I6DPFAEKJDWOTXZFBN",
+  "amount": "10.0000000",
+  "path": [],
+  "source_amount": "20.0000000",
+  "source_max": "20.2000000",
+  "source_asset_type": "native"
+}

@@ -229,6 +229,68 @@ describe("matchPayment", () => {
       }
     });
   });
+
+  // Path payments (issue 2.17): a path payment is judged on the *delivered*
+  // side — `amount`/`asset`, which normalizePayment fills from Horizon's
+  // destination fields. `sourceAmount`/`sourceAsset` (what the buyer spent) are
+  // carried for receipts but must never influence the outcome.
+  describe("path payments settle on the delivered side", () => {
+    const ECO_ISSUER = "GBINSDAFTE3II244THL2EACS6VLE5OVZMS7UI6N42Z7ZU5X4KMQ2GOEW";
+    const IOM_ISSUER = ECO_ISSUER;
+
+    it("strict receive delivering exactly the link asset and amount is paid", () => {
+      // Mirrors testnet operation 25202125063602177: 20 XLM spent, 10 USDC delivered.
+      const l = link({ amount: "10", asset: { code: "USDC", issuer: ISSUER } });
+      const r = matchPayment(
+        payment({
+          amount: "10.0000000",
+          asset: { code: "USDC", issuer: ISSUER },
+          sourceAmount: "20.0000000",
+          sourceAsset: { code: "XLM", issuer: null },
+        }),
+        byRef(l),
+      );
+      expect(r.kind).toBe("paid");
+      if (r.kind === "paid") {
+        expect(r.overpaid).toBe(false);
+        expect(r.receivedTotal).toBe("10");
+      }
+    });
+
+    it("strict receive delivering a different asset is asset_mismatch", () => {
+      const l = link({ amount: "10", asset: { code: "USDC", issuer: ISSUER } });
+      const r = matchPayment(
+        payment({
+          amount: "10.0000000",
+          asset: { code: "ECO", issuer: ECO_ISSUER },
+          sourceAmount: "20.0000000",
+          sourceAsset: { code: "XLM", issuer: null },
+        }),
+        byRef(l),
+      );
+      expect(r.kind).toBe("asset_mismatch");
+    });
+
+    it("strict send delivering less than requested is underpaid with the right outstanding", () => {
+      // Mirrors testnet operation 25201536653078529: 10 IOM sent, only 20 ECO
+      // delivered against a link asking for 25 ECO.
+      const l = link({ amount: "25", asset: { code: "ECO", issuer: ECO_ISSUER } });
+      const r = matchPayment(
+        payment({
+          amount: "20.0000000",
+          asset: { code: "ECO", issuer: ECO_ISSUER },
+          sourceAmount: "10.0000000",
+          sourceAsset: { code: "IOM", issuer: IOM_ISSUER },
+        }),
+        byRef(l),
+      );
+      expect(r.kind).toBe("underpaid");
+      if (r.kind === "underpaid") {
+        expect(r.receivedTotal).toBe("20");
+        expect(r.outstanding).toBe("5");
+      }
+    });
+  });
 });
 
 // ── Property-based tests ──────────────────────────────────────────────────────

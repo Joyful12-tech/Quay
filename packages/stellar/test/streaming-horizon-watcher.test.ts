@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { StreamingHorizonWatcher } from "../src/streaming-horizon-watcher";
 import type { HorizonPaymentRecord } from "../src/horizon-client";
@@ -5,6 +6,15 @@ import { FakeHorizonClient } from "./fake-horizon";
 import { runWatcherContract } from "./watcher-contract";
 
 const FAST_BACKOFF = { initialBackoffMs: 5, maxBackoffMs: 20 };
+
+/** Loads a recorded Horizon operation record and attaches the transaction the
+ *  watcher would otherwise have fetched. */
+function pathPaymentFixture(name: string): any {
+  return {
+    ...JSON.parse(readFileSync(new URL(`./fixtures/${name}`, import.meta.url), "utf8")),
+    transaction: async () => ({ memo_type: "text", memo: "ref_path" }),
+  };
+}
 
 runWatcherContract("StreamingHorizonWatcher (stream)", () => {
   const fake = new FakeHorizonClient();
@@ -198,6 +208,30 @@ describe("StreamingHorizonWatcher extras", () => {
     expect(elapsed).toBeLessThan(1000);
     expect(payments.find((p) => p.pagingToken === "2")).toBeUndefined();
     expect(payments).toEqual([]);
+
+    watcher.stop();
+  });
+
+  it("passes a strict-send path payment through unchanged (issue 2.17)", async () => {
+    const fake = new FakeHorizonClient();
+    const watcher = new StreamingHorizonWatcher(fake, FAST_BACKOFF);
+
+    // Subscribe before pushing, so the record arrives over the SSE path.
+    await watcher.fetchSince(ACCOUNT, "");
+
+    const record = pathPaymentFixture("path-payment-strict-send.json");
+    fake.pushMessage(ACCOUNT, record);
+
+    const payments = await watcher.fetchSince(ACCOUNT, "");
+    expect(payments).toHaveLength(1);
+    expect(payments[0]).toMatchObject({
+      amount: "20.0000000", // delivered, not the 10 spent
+      asset: { code: "ECO", issuer: "GBINSDAFTE3II244THL2EACS6VLE5OVZMS7UI6N42Z7ZU5X4KMQ2GOEW" },
+      sourceAmount: "10.0000000",
+      sourceAsset: { code: "IOM", issuer: "GBINSDAFTE3II244THL2EACS6VLE5OVZMS7UI6N42Z7ZU5X4KMQ2GOEW" },
+      toMuxedId: "444444444444",
+      memo: "ref_path",
+    });
 
     watcher.stop();
   });
