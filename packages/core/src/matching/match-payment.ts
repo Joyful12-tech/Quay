@@ -11,6 +11,15 @@ export interface NormalizedPayment {
   to: string; // destination account the value landed in
   amount: string; // delivered amount, decimal string
   asset: AssetRef;
+  /** Path payments only: the asset the payer actually spent (Horizon's
+   *  `source_asset_*`). Null (or absent) for plain payments. Informational —
+   *  settlement is judged on the delivered `asset`/`amount` above, and
+   *  `matchPayment` never reads this. */
+  sourceAsset?: AssetRef | null;
+  /** Path payments only: the amount the payer spent (Horizon's
+   *  `source_amount`), which differs from `amount` whenever the path crossed
+   *  assets or prices. Null (or absent) for plain payments. */
+  sourceAmount?: string | null;
   memo: string | null; // transaction memo (correlation id), if any
   memoType: string | null; // "text" | "id" | "hash" | "none" | ...
   // SEP-23 muxed id decoded from the operation's `to_muxed_id`, when the payer
