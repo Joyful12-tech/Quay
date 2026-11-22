@@ -10,6 +10,7 @@ import {
 } from "@checkout/core";
 import type { Container } from "../services/container";
 import { HttpError } from "../services/link-service";
+import { paidWithFor, paidWithLabel, type PaidWithEntry } from "../services/paid-with";
 import { buildAuthMiddleware, requireScope, type AuthVariables } from "../middleware/auth";
 import { idempotency } from "../middleware/idempotency";
 import { getLogger } from "../request-context";
@@ -106,7 +107,12 @@ export function linkRoutes(c: Container, strictRateLimit: MiddlewareHandler): Ho
       filtered = filtered.filter((l) => l.createdAt <= toMs);
     }
 
-    const csv = LINKS_CSV_HEADER + filtered.map(linkToCsvRow).join("\n");
+    const rows = await Promise.all(
+      filtered.map(async (l) =>
+        linkToCsvRow(l, paidWithFor(await c.links.listPaymentsForLink(l.id))),
+      ),
+    );
+    const csv = LINKS_CSV_HEADER + rows.join("\n");
 
     return ctx.newResponse(csv, 200, {
       "content-type": "text/csv; charset=utf-8",
@@ -427,15 +433,20 @@ export function toCheckoutView(link: PaymentLink) {
 }
 
 /**
- * Header of `GET /links/export/csv`. `offramp_status` is last so existing consumers that read the
- * earlier columns by position keep working. It separates a cash-out that is waiting for the seller's
- * on-chain transfer (`awaiting_transfer`) from one the anchor is paying out (`pending`); `status`
- * alone reads `offramp_pending` for both.
+ * Header of `GET /links/export/csv`. New columns go last, so existing consumers that read the
+ * earlier columns by position keep working.
+ *
+ * `offramp_status` separates a cash-out that is waiting for the seller's on-chain transfer
+ * (`awaiting_transfer`) from one the anchor is paying out (`pending`); `status` alone reads
+ * `offramp_pending` for both.
+ *
+ * `paid_with` is what the buyer spent on each path payment (`24.1234567 XLM`, several joined
+ * with `; `), empty when every payment was a plain payment (issue 4.66).
  */
 export const LINKS_CSV_HEADER =
-  "id,reference,title,amount,asset,status,payer,tx_hash,paid_amount,created_at,updated_at,offramp_status\n";
+  "id,reference,title,amount,asset,status,payer,tx_hash,paid_amount,created_at,updated_at,offramp_status,paid_with\n";
 
-export function linkToCsvRow(l: PaymentLink): string {
+export function linkToCsvRow(l: PaymentLink, paidWith: PaidWithEntry[] | null = null): string {
   return [
     l.id,
     l.reference,
@@ -449,6 +460,7 @@ export function linkToCsvRow(l: PaymentLink): string {
     new Date(l.createdAt).toISOString(),
     new Date(l.updatedAt).toISOString(),
     l.offrampStatus ?? "",
+    csvCell(paidWithLabel(paidWith)),
   ].join(",");
 }
 

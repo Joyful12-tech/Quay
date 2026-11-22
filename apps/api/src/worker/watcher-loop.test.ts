@@ -37,6 +37,7 @@ const mockLinks: LinkRepository = {
   save: vi.fn(),
   recordPayment: vi.fn(),
   sumPaymentsForLink: vi.fn(),
+  listPaymentsForLink: vi.fn(),
   paymentLedger: vi.fn(),
   claimForCashOut: vi.fn(),
   releaseCashOutClaim: vi.fn(),

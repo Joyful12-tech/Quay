@@ -11,6 +11,10 @@ export interface NormalizedPayment {
   to: string; // destination account the value landed in
   amount: string; // delivered amount, decimal string
   asset: AssetRef;
+  /** What the payer spent, for a path payment (issue 4.66). Null/absent for a
+   *  plain payment, where the source side equals `asset`/`amount`. */
+  sourceAsset?: AssetRef | null;
+  sourceAmount?: string | null;
   memo: string | null; // transaction memo (correlation id), if any
   memoType: string | null; // "text" | "id" | "hash" | "none" | ...
   // SEP-23 muxed id decoded from the operation's `to_muxed_id`, when the payer

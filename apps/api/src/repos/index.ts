@@ -301,6 +301,9 @@ export class DrizzleLinkRepository implements LinkRepository {
         assetCode: payment.asset.code,
         assetIssuer: payment.asset.issuer,
         ledger: payment.ledger,
+        sourceAssetCode: payment.sourceAsset?.code ?? null,
+        sourceAssetIssuer: payment.sourceAsset?.issuer ?? null,
+        sourceAmount: payment.sourceAmount ?? null,
         createdAt: payment.createdAt,
       })
       .onConflictDoNothing({ target: [linkPayments.txHash, linkPayments.operationId] });
@@ -322,6 +325,30 @@ export class DrizzleLinkRepository implements LinkRepository {
       .where(eq(linkPayments.linkId, linkId));
     const total = rows.reduce((sum, r) => sum + toStroops(r.amount), 0n);
     return fromStroops(total);
+  }
+
+  /** Every payment recorded against one link, oldest first (issue 4.66). */
+  async listPaymentsForLink(linkId: string): Promise<LinkPaymentRecord[]> {
+    const rows = await this.db
+      .select()
+      .from(linkPayments)
+      .where(eq(linkPayments.linkId, linkId))
+      .orderBy(asc(linkPayments.createdAt), asc(linkPayments.id));
+    return rows.map((r) => ({
+      linkId: r.linkId,
+      txHash: r.txHash,
+      // NULL only on rows written before the operation column existed.
+      operationId: r.operationId ?? "",
+      payer: r.payer,
+      amount: r.amount,
+      asset: { code: r.assetCode, issuer: r.assetIssuer ?? null },
+      ledger: r.ledger ?? 0,
+      createdAt: r.createdAt,
+      sourceAsset: r.sourceAssetCode
+        ? { code: r.sourceAssetCode, issuer: r.sourceAssetIssuer ?? null }
+        : null,
+      sourceAmount: r.sourceAmount ?? null,
+    }));
   }
 
   /** Every payment recorded against any of the seller's links, newest first (privacy export). */

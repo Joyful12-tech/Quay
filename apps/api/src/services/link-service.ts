@@ -478,6 +478,9 @@ export class LinkService {
         amount: normalizeAmount(payment.amount),
         asset: payment.asset,
         ledger: payment.ledger,
+        // The buyer's side of a path payment (issue 4.66); null for a plain one.
+        sourceAsset: payment.sourceAsset ?? null,
+        sourceAmount: payment.sourceAmount ?? null,
         createdAt: Date.now(),
       });
       const cumulative = await this.deps.links.sumPaymentsForLink(link.id);
@@ -516,6 +519,9 @@ export class LinkService {
         amount: normalizeAmount(payment.amount),
         asset: payment.asset,
         ledger: payment.ledger,
+        // The buyer's side of a path payment (issue 4.66); null for a plain one.
+        sourceAsset: payment.sourceAsset ?? null,
+        sourceAmount: payment.sourceAmount ?? null,
         createdAt: Date.now(),
       });
       const cumulative = await this.deps.links.sumPaymentsForLink(link.id);
