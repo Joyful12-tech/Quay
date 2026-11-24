@@ -368,23 +368,39 @@ reason to disable it while testnet still does.
 
 ### Nightly path payment probe
 
-`.github/workflows/anchor-probe.yml` runs `apps/api/test/live/path-payment.live.test.ts`
-nightly with `RUN_LIVE_PATH_TESTS=1`. It verifies the end-to-end "pay with any asset"
-loop on live Stellar testnet:
+`.github/workflows/path-payment-probe.yml` runs `apps/api/test/live/path-payment.live.test.ts`
+nightly at 05:00 UTC with `RUN_LIVE_PATH_TESTS=1`, in its own workflow: it used to
+be a step inside `anchor-probe.yml`, where `ANCHOR_PROBE_DISABLED=1` — documented
+for operators who cash out through no anchor — quietly turned off the gate too.
+The probe does not depend on an anchor.
+
+It verifies the end-to-end "pay with any asset" loop on live Stellar testnet, and
+every stage asserts the **API's** answer. Nothing falls back to Horizon, so a
+broken flow fails the job instead of being re-checked behind the API's back:
 1. **Self-seeded SDEX liquidity:** It creates a throwaway issuer, mints USDC,
    funds a market maker via Friendbot, and places a `manageSellOffer` selling USDC
    for XLM at a fixed price. The test never depends on public testnet liquidity,
    and testnet resets do not break it.
 2. **Participant setup:** Funds a seller with a USDC trustline and a buyer holding
    XLM only (no USDC trustline).
-3. **Quoting & Link creation:** Creates a 10 USDC link under test, quotes
-   strict-receive payment paths from Horizon for XLM to deliver 10 USDC.
-4. **Negative case:** Shrinking `sendMax` below the quote fails submission with
-   reason `price_moved` (`op_over_source_max`).
-5. **Positive case:** Builds and signs the `path_payment_strict_receive` transaction,
-   submits it, runs the ledger watcher (`fetchSince` + `matchPayment` + `applyMatch`),
-   and asserts the link is marked `paid`, the delivered amount is exactly 10 USDC,
-   and `paidWith` records XLM.
+3. **API boot:** Boots the real container in-process against a throwaway SQLite
+   database with `PATH_PAYMENTS_ENABLED=1`, mounts the real `/links` and `/r`
+   routes, and creates a 10 USDC link.
+4. **Pay options:** `GET /links/:id/pay-options` must offer XLM for the 10 USDC at
+   the seeded price; any failure other than the route not existing fails the job.
+5. **Price moved:** `POST /links/:id/submit` must refuse a `sendMax` far above the
+   API's own quote with `409 payment_rejected`, `reason: price_moved`.
+6. **Settlement:** `POST /links/:id/submit` relays the quoted
+   `path_payment_strict_receive`, the watcher matches it, and the link is `paid`
+   with exactly 10 USDC delivered.
+7. **What the buyer paid with:** `GET /r/:reference` must report `paidWith` XLM.
+
+**Dependencies.** Stages 4 and 7 need #548 (`GET /links/:id/pay-options`), stages
+5 and 6 need #549 (relaying a validated path payment), and stage 7 needs #550
+(record what the buyer paid with). Until those are on `dev`, the stage is skipped
+with the issue named in the skip message — it never re-checks Horizon. A probe run
+whose stages all skipped proves nothing, so read the summary before trusting a
+green job.
 
 **Production go-live requirement:** Turning `PATH_PAYMENTS_ENABLED=true` on in
 production (issue 8.30) strictly requires this nightly job to be green. Path
@@ -392,6 +408,8 @@ payments stay disabled on mainnet until this live testnet suite has passed.
 
 **Run it locally:**
 `RUN_LIVE_PATH_TESTS=1 pnpm --filter @checkout/api exec vitest run test/live/path-payment.live.test.ts`
+(the file sets `PATH_PAYMENTS_ENABLED=1` for its own in-process container; the
+workflow sets it too, as the switch the probe gates).
 Without `RUN_LIVE_PATH_TESTS=1`, the test is skipped cleanly and normal test suites
 stay offline with zero network calls.
 

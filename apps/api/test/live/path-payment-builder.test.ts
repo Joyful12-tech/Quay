@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Keypair, Operation } from "@stellar/stellar-sdk";
-import {
-  buildPathPayment,
-  calculateSendMax,
-  extractHorizonPaymentReason,
-  toSdkAsset,
-} from "./path-payment-builder";
+import { buildPathPayment, calculateSendMax, toSdkAsset } from "./path-payment-builder";
 
 describe("path-payment-builder", () => {
   describe("toSdkAsset", () => {
@@ -70,76 +65,6 @@ describe("path-payment-builder", () => {
       expect(op.sendMax).toBe("20.2000000");
       expect(op.path).toHaveLength(0);
       expect(tx.memo.value?.toString()).toBe("ref_12345");
-    });
-  });
-
-  describe("extractHorizonPaymentReason", () => {
-    it("detects price_moved for op_over_source_max", () => {
-      const err = {
-        response: {
-          data: {
-            extras: {
-              result_codes: {
-                transaction: "tx_failed",
-                operations: ["op_over_source_max"],
-              },
-            },
-          },
-        },
-      };
-      expect(extractHorizonPaymentReason(err)).toBe("price_moved");
-    });
-
-    it("detects no_path for op_too_few_offers", () => {
-      const err = {
-        response: {
-          data: {
-            extras: {
-              result_codes: {
-                transaction: "tx_failed",
-                operations: ["op_too_few_offers"],
-              },
-            },
-          },
-        },
-      };
-      expect(extractHorizonPaymentReason(err)).toBe("no_path");
-    });
-
-    it("detects insufficient_balance for op_underfunded", () => {
-      const err = {
-        response: {
-          data: {
-            extras: {
-              result_codes: {
-                transaction: "tx_failed",
-                operations: ["op_underfunded"],
-              },
-            },
-          },
-        },
-      };
-      expect(extractHorizonPaymentReason(err)).toBe("insufficient_balance");
-    });
-
-    it("detects missing_trustline for op_no_trust", () => {
-      const err = {
-        response: {
-          data: {
-            extras: {
-              result_codes: {
-                transaction: "tx_failed",
-                operations: ["op_no_trust"],
-              },
-            },
-          },
-        },
-      };
-      expect(extractHorizonPaymentReason(err)).toBe("missing_trustline");
-    });
-
-    it("returns payment_rejected for generic errors", () => {
-      expect(extractHorizonPaymentReason(new Error("Network failure"))).toBe("payment_rejected");
     });
   });
 });
