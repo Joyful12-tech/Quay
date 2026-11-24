@@ -97,69 +97,6 @@ export function buildPathPayment(input: BuildPathPaymentInput): Transaction {
   return builder.build();
 }
 
-export type HorizonPaymentReason =
-  | "price_moved"
-  | "no_path"
-  | "insufficient_balance"
-  | "missing_trustline"
-  | "payment_rejected";
-
-/**
- * Maps Horizon error result codes to clean payment rejection reasons (issues 2.18 / 5.47).
- * Specifically maps `op_over_source_max` to `price_moved` and `op_too_few_offers` to `no_path`.
- */
-export function extractHorizonPaymentReason(err: unknown): HorizonPaymentReason {
-  if (typeof err === "object" && err !== null) {
-    // If it's already an HttpError with a mapped reason in details
-    const details = (err as { details?: { reason?: unknown } }).details;
-    if (details && typeof details.reason === "string") {
-      const r = details.reason;
-      if (
-        r === "price_moved" ||
-        r === "no_path" ||
-        r === "insufficient_balance" ||
-        r === "missing_trustline" ||
-        r === "payment_rejected"
-      ) {
-        return r;
-      }
-    }
-
-    const response = (err as { response?: { data?: unknown } }).response;
-    const data = response?.data;
-    const resultCodes =
-      data && typeof data === "object" && "extras" in data
-        ? (data as { extras?: { result_codes?: unknown } }).extras?.result_codes
-        : undefined;
-
-    const codes = resultCodes
-      ? Object.values(resultCodes as Record<string, unknown>).flatMap((value) =>
-          Array.isArray(value)
-            ? value.filter((v): v is string => typeof v === "string")
-            : typeof value === "string"
-              ? [value]
-              : [],
-        )
-      : [];
-
-    const upperCodes = codes.map((c) => c.toUpperCase());
-    if (upperCodes.some((code) => code.includes("OVER_SOURCE_MAX"))) {
-      return "price_moved";
-    }
-    if (upperCodes.some((code) => code.includes("TOO_FEW_OFFERS"))) {
-      return "no_path";
-    }
-    if (upperCodes.some((code) => code.includes("UNDERFUNDED") || code.includes("LINE_FULL"))) {
-      return "insufficient_balance";
-    }
-    if (upperCodes.some((code) => code.includes("NO_TRUST") || code.includes("NOT_AUTHORIZED"))) {
-      return "missing_trustline";
-    }
-  }
-
-  return "payment_rejected";
-}
-
 /** Funds a testnet address via Friendbot with retry on rate limit. */
 export async function fundWithFriendbot(address: string, maxRetries = 3): Promise<void> {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
