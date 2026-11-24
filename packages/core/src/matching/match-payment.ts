@@ -13,6 +13,12 @@ export interface NormalizedPayment {
   asset: AssetRef;
   /** What the payer spent, for a path payment (issue 4.66). Null/absent for a
    *  plain payment, where the source side equals `asset`/`amount`. */
+  // Path payments only (null for a plain `payment`): the asset the payer
+  // actually spent and how much of it. Horizon reports the delivered side in
+  // `amount`/`asset_*` and the paid side in `source_amount`/`source_asset_*`;
+  // these carry the latter so receipts and CSVs can name the buyer's outlay.
+  // matchPayment deliberately ignores them — settlement is judged on the
+  // delivered side.
   sourceAsset?: AssetRef | null;
   sourceAmount?: string | null;
   memo: string | null; // transaction memo (correlation id), if any

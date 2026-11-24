@@ -126,8 +126,11 @@ export default function LandingPage() {
                   <Arrow />
                 </span>
               </Link>
+              {/* Reworded (issue 5.43): on mainnet /demo is a storefront and
+                  an integration snippet, not a working checkout — the demo API
+                  is testnet-only — so the link says what the page is. */}
               <Link href="/demo" className="lp-textlink">
-                See the checkout in a demo store
+                See how the widget fits a storefront
               </Link>
             </div>
             <ul className="lp-proof">
@@ -319,7 +322,7 @@ export default function LandingPage() {
         <Logo size={22} />
         <nav aria-label="Footer">
           <Link href="/privacy">Privacy</Link>
-          <Link href="/demo">Demo store</Link>
+          <Link href="/demo">Widget demo</Link>
           <a href={REPO}>GitHub</a>
         </nav>
         <p>© 2026 Quay. Apache-2.0.</p>

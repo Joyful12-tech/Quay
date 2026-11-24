@@ -11,6 +11,13 @@ const VALUE_TYPES = new Set([
 // Path payments also report what the payer spent (`source_*`); a plain payment
 // has no source side of its own (issue 4.66).
 const PATH_TYPES = new Set(["path_payment_strict_receive", "path_payment_strict_send"]);
+// Path payments convert an asset on the way, so Horizon reports two sides:
+// `amount`/`asset_*` is what the destination received, `source_amount`/
+// `source_asset_*` is what the payer spent. Only path payments have the latter.
+const PATH_PAYMENT_TYPES = new Set([
+  "path_payment_strict_receive",
+  "path_payment_strict_send",
+]);
 
 type AnyRecord = Horizon.ServerApi.PaymentOperationRecord | Horizon.ServerApi.OperationRecord;
 
@@ -57,6 +64,13 @@ function sourceAssetOf(r: ValueFields): AssetRef {
     return { code: "XLM", issuer: null };
   }
   return { code: r.source_asset_code ?? "", issuer: r.source_asset_issuer ?? null };
+/** The paid side of a path payment, from Horizon's `source_asset_*` fields. */
+function sourceAssetOf(r: ValueFields): AssetRef {
+  return assetOf({
+    asset_type: r.source_asset_type,
+    asset_code: r.source_asset_code,
+    asset_issuer: r.source_asset_issuer,
+  });
 }
 
 /**
@@ -84,6 +98,7 @@ export async function normalizePayment(
   const tx = await fetchTransaction(r);
   const memoType = tx.memo_type ?? null;
   const memo = memoType && memoType !== "none" ? (tx.memo ?? null) : null;
+  const isPathPayment = PATH_PAYMENT_TYPES.has(record.type);
 
   // A plain payment has no separate source side: it spent what it delivered.
   const path = r.type !== undefined && PATH_TYPES.has(r.type);
@@ -97,6 +112,10 @@ export async function normalizePayment(
     asset: assetOf(r),
     sourceAsset: path ? sourceAssetOf(r) : null,
     sourceAmount: path ? (r.source_amount ?? null) : null,
+    // For a path payment Horizon's `amount`/`asset_*` are the delivered side;
+    // the paid side rides along for the receipt/CSV but never decides a match.
+    sourceAsset: isPathPayment ? sourceAssetOf(r) : null,
+    sourceAmount: isPathPayment ? (r.source_amount ?? null) : null,
     memo,
     memoType,
     toMuxedId: r.to_muxed_id ?? null,
