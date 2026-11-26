@@ -11,8 +11,6 @@ export interface NormalizedPayment {
   to: string; // destination account the value landed in
   amount: string; // delivered amount, decimal string
   asset: AssetRef;
-  /** What the payer spent, for a path payment (issue 4.66). Null/absent for a
-   *  plain payment, where the source side equals `asset`/`amount`. */
   // Path payments only (null for a plain `payment`): the asset the payer
   // actually spent and how much of it. Horizon reports the delivered side in
   // `amount`/`asset_*` and the paid side in `source_amount`/`source_asset_*`;
