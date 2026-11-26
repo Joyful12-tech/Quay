@@ -14,6 +14,7 @@ import { paidWithFor, paidWithLabel, type PaidWithEntry } from "../services/paid
 import { buildAuthMiddleware, requireScope, type AuthVariables } from "../middleware/auth";
 import { idempotency } from "../middleware/idempotency";
 import { getLogger } from "../request-context";
+import { env } from "../env";
 
 export function linkRoutes(c: Container, strictRateLimit: MiddlewareHandler): Hono<{ Variables: AuthVariables }> {
   const app = new Hono<{ Variables: AuthVariables }>();
@@ -134,7 +135,13 @@ export function linkRoutes(c: Container, strictRateLimit: MiddlewareHandler): Ho
   app.get("/:id", async (ctx) => {
     const result = await c.service.getLink(ctx.req.param("id"), { logger: getLogger(ctx) });
     if (!result) return ctx.json({ error: "not_found" }, 404);
-    return ctx.json({ link: toCheckoutView(result.link), request: result.request });
+    return ctx.json({
+      link: toCheckoutView(result.link),
+      request: result.request,
+      // The checkout reads the path-payment switch from here, never from its
+      // own env (issue 8.30).
+      pay: { pathPayments: env.pathPaymentsEnabled, maxSlippageBps: env.pathPaymentsMaxSlippageBps },
+    });
   });
 
   // Indicative off-ramp prices — SEP-38 GET /prices, no firm quote consumed.

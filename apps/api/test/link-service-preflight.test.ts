@@ -38,6 +38,7 @@ function fakeLinks(): LinkRepository {
     paymentLedger: vi.fn(async () => null),
     claimForCashOut: vi.fn(async () => true),
     releaseCashOutClaim: vi.fn(async () => {}),
+    listPaymentsForLink: vi.fn(async () => []),
   };
 }
 
