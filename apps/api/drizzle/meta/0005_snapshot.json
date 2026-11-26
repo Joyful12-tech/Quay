@@ -1,7 +1,6 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "f87e759a-d727-48d0-b912-2e51ad62917b",
   "id": "73a0556f-ba65-4314-a2c2-945139129a4c",
   "prevId": "fda30a72-6fde-43cc-80f2-376988d8b452",
   "tables": {
@@ -488,27 +487,6 @@
         "ledger": {
           "name": "ledger",
           "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "source_asset_code": {
-          "name": "source_asset_code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "source_asset_issuer": {
-          "name": "source_asset_issuer",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "source_amount": {
-          "name": "source_amount",
-          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
