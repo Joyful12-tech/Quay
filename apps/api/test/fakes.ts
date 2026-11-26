@@ -150,10 +150,6 @@ export class FakeLinkRepository implements LinkRepository {
     return fromStroops(total);
   }
 
-  async listPaymentsForLink(linkId: string): Promise<LinkPaymentRecord[]> {
-    return this.payments.filter((p) => p.linkId === linkId);
-  }
-
   async paymentLedger(txHash: string): Promise<number | null> {
     return this.payments.find((p) => p.txHash === txHash)?.ledger ?? null;
   }
