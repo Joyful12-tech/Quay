@@ -333,13 +333,17 @@ export class DrizzleLinkRepository implements LinkRepository {
     return fromStroops(total);
   }
 
-  /** Every payment recorded against one link, oldest first (issue 4.66). */
+  /**
+   * Every payment recorded against one link, oldest first (issues 4.58, 4.66).
+   * Rows written before `operation_id`/`ledger` existed read back as "" and 0;
+   * rows written before the source columns existed read back as plain payments.
+   */
   async listPaymentsForLink(linkId: string): Promise<LinkPaymentRecord[]> {
     const rows = await this.db
       .select()
       .from(linkPayments)
       .where(eq(linkPayments.linkId, linkId))
-      .orderBy(asc(linkPayments.createdAt), asc(linkPayments.id));
+      .orderBy(asc(linkPayments.createdAt), asc(linkPayments.txHash), asc(linkPayments.operationId));
     return rows.map((r) => ({
       linkId: r.linkId,
       txHash: r.txHash,

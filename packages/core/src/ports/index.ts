@@ -838,10 +838,6 @@ export interface LinkRepository {
   /** Sum of every payment ever recorded for this link, as a decimal string
    *  ("0" if none). The authoritative source `paidAmount` is cached from. */
   sumPaymentsForLink(linkId: string): Promise<string>;
-  /** Every payment recorded against this link, oldest first. Feeds the public
-   *  receipt and the seller's CSV export, which report what a path payment was
-   *  paid with (issue 4.66). */
-  listPaymentsForLink(linkId: string): Promise<LinkPaymentRecord[]>;
   /** Ledger a recorded payment settled in; null if the tx isn't on the ledger
    *  table, or predates the column. */
   paymentLedger(txHash: string): Promise<number | null>;
