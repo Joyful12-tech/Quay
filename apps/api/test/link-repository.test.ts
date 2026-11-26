@@ -227,3 +227,5 @@ describe("DrizzleLinkRepository listPaymentsForLink (issue 4.58)", () => {
     expect(await links.listPaymentsForLink("lnk_none")).toEqual([]);
   });
 });
+  });
+});
