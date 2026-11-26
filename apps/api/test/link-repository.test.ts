@@ -183,6 +183,9 @@ describe("DrizzleLinkRepository payment source side", () => {
     expect(payment.amount).toBe("10");
     expect(payment.sourceAsset).toBeNull();
     expect(payment.sourceAmount).toBeNull();
+  });
+});
+
 describe("DrizzleLinkRepository listPaymentsForLink (issue 4.58)", () => {
   const USDC = { code: "USDC", issuer: "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5" };
 
@@ -225,7 +228,5 @@ describe("DrizzleLinkRepository listPaymentsForLink (issue 4.58)", () => {
 
     expect(await links.listPaymentsForLink("lnk_split")).toEqual([bob, alice]);
     expect(await links.listPaymentsForLink("lnk_none")).toEqual([]);
-  });
-});
   });
 });
