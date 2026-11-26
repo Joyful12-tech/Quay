@@ -212,6 +212,8 @@ describe("DrizzleLinkRepository listPaymentsForLink (issue 4.58)", () => {
       asset: USDC,
       ledger: 100,
       createdAt: 2_000,
+      sourceAsset: null,
+      sourceAmount: null,
     };
     const bob = {
       ...alice,
